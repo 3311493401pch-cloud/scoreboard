@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分数排行榜</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f5f5;
+    color: #333;
+  }
+  .header {
+    background: #fff;
+    padding: 24px 20px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header .info { font-size: 13px; color: #999; margin-top: 4px; }
+  .container { max-width: 720px; margin: 0 auto; padding: 16px; }
+  .toolbar {
+    display: flex; gap: 10px; margin-bottom: 12px;
+  }
+  .toolbar input, .toolbar select {
+    padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 4px;
+    font-size: 14px; outline: none;
+  }
+  .toolbar input:focus, .toolbar select:focus { border-color: #666; }
+  .toolbar input { flex: 1; }
+  table {
+    width: 100%; border-collapse: collapse; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  thead th {
+    background: #fafafa; padding: 10px 12px; text-align: left;
+    font-size: 13px; color: #666; border-bottom: 1px solid #e0e0e0;
+    cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: #333; }
+  thead th .arrow { font-size: 10px; }
+  tbody td {
+    padding: 9px 12px; font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  tbody tr:hover { background: #f9f9f9; }
+  .rank { color: #999; font-size: 12px; }
+  .score { font-weight: 600; }
+  .school { color: #555; font-size: 13px; }
+  .no-result { text-align: center; padding: 40px; color: #999; }
+  .footer { text-align: center; padding: 20px; font-size: 12px; color: #bbb; }
+  @media (max-width: 480px) {
+    .toolbar { flex-direction: column; }
+    tbody td, thead th { padding: 8px 6px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>分数排行榜</h1>
+  <div class="info" id="countDisplay">共 102 人</div>
+</div>
+<div class="container">
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="搜索姓名或学校..." autocomplete="off">
+    <select id="schoolFilter">
+      <option value="">全部学校</option>
+    </select>
+    <select id="scoreFilter">
+      <option value="">全部分数</option>
+      <option value="140">≥ 140</option>
+      <option value="130">≥ 130</option>
+      <option value="120">≥ 120</option>
+      <option value="110">≥ 110</option>
+      <option value="100">≥ 100</option>
+    </select>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:44px">#</th>
+        <th>姓名</th>
+        <th data-sort="score" class="sorted">分数 <span class="arrow">▼</span></th>
+        <th>学校</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="no-result" id="noResult" style="display:none">没有匹配的结果</div>
+  <div class="footer">数据来源：分数线排行榜 + 计算机分数 合并去重</div>
+</div>
+<script>
+var DATA = [
+  ["姓名","分数","学校"],
+  ["胡子阳","148","常州大学"],
+  ["徐畅","147","常州大学"],
+  ["丁闻杰","147","常州大学"],
+  ["黄昊","147","常州大学"],
+  ["李滨","147","常州大学"],
+  ["黄欣雨","146","常州大学"],
+  ["34。","146","苏州科技大学"],
+  ["王亮","145","常州大学"],
+  ["李昊政","145","苏州科技大学"],
+  ["史亚宁","145","苏州科技大学"],
+  ["李文","145","常州大学"],
+  ["于放","145",""],
+  ["戴鑫","145",""],
+  ["王岱巍","145",""],
+  ["魏东泽","145",""],
+  ["胡豹","145",""],
+  ["刘宇","144","南京工程学院"],
+  ["俞林涛","144","苏州科技大学"],
+  ["徐梓涵","144","苏州科技大学"],
+  ["徐","144","苏州科技大学"],
+  ["refrain","144","苏州科技大学"],
+  ["张锦辉","144",""],
+  ["吴子正","143","常州大学"],
+  ["殷浩麟","143","常州大学"],
+  ["雷义生","143","常州大学"],
+  ["刘忠义","143","苏州科技大学"],
+  ["杨迎秋","142","江苏海洋大学"],
+  ["宋鹏晖","142","常州大学"],
+  ["陈晨","142","常州大学"],
+  ["宋鹏辉","142","常州大学"],
+  ["关丙辰、","142",""],
+  ["某自学","142",""],
+  ["胥舒悦","141","常州大学"],
+  ["陈智豪","141","苏州科技大学"],
+  ["王圣旗","141","常州大学"],
+  ["王嘉伟","141","苏州科技大学"],
+  ["陆金强","141","苏州科技大学"],
+  ["xiaozu","141","常州大学"],
+  ["唐晓龙","141",""],
+  ["郭佳乐","141",""],
+  ["叶不秋，","141",""],
+  ["默默学1","141",""],
+  ["叶子落了","141",""],
+  ["锦川","141",""],
+  ["林岳峦","140","南京工程学院"],
+  ["唐彬","140",""],
+  ["冯余硕","140",""],
+  ["赵","140",""],
+  ["茴香。","140",""],
+  ["张文岩","140",""],
+  ["靳维","139","常州大学"],
+  ["贾浩","139","常州大学"],
+  ["伊肆七，","139",""],
+  ["施宇捷","138","常州大学"],
+  ["张","138","苏州科技大学"],
+  ["黄x明","138","苏州科技大学"],
+  ["孙振豪","137","常州大学"],
+  ["李宇杰","137","南京工程学院"],
+  ["李","137","南京工程学院"],
+  ["X键","137","苏州科技大学"],
+  ["罗家梁","137",""],
+  ["叶峻希","136","苏州科技大学"],
+  ["李子岳","136","南京工程学院"],
+  ["蒋振秋","136","苏州科技大学"],
+  ["宋洛凡","136",""],
+  ["邓杰","136",""],
+  ["胡金智","135","常州大学"],
+  ["杨X远","135","南京工程学院"],
+  ["陈子涵","135",""],
+  ["她来听我演唱会","135",""],
+  ["阿西吧。","135",""],
+  ["刘晨飞","135",""],
+  ["左博文","134","常州大学"],
+  ["张子泰","133","常州大学"],
+  ["胡培成","133","常州大学"],
+  ["石潇","132","常州大学"],
+  ["臧子祥","130","南京工程学院"],
+  ["杨春晖","130","金陵科技学院"],
+  ["董涛","129","南京工程学院"],
+  ["陈开圣","126","南京工程学院"],
+  ["连帅","125","徐州工程学院"],
+  ["渡","124","南京晓庄学院"],
+  ["郑传臻","122","南京工程学院"],
+  ["李启鑫","122","常州大学"],
+  ["范嘉轩","120","常州大学"],
+  ["刘子毅","119","金陵科技学院"],
+  ["洪佳健","117","徐州工程学院"],
+  ["徐杰","116","徐州工程学院"],
+  ["刘志洋","116","南京工程学院"],
+  ["李家琦","115","江苏海洋大学"],
+  ["徐宇星","114","南京工程学院"],
+  ["姜崔亮","113","徐州工程学院"],
+  ["赵怀晨","111","徐州工程学院"],
+  ["王洋洋","108","徐州工程学院"],
+  ["沈云飞","106","苏州城市学院"],
+  ["陈志鹏","105","常州大学"],
+  ["邓阳","104","常州大学"],
+  ["陆松颐","104","南京工程学院"],
+  ["王永康","101","金陵科技学院"],
+  ["肖冉旭","98","南京工程学院"],
+  ["成嘉木","86","江苏理工学院"],
+  ["吴宪","75","南京工程学院"]
+];
+var rows = DATA.slice(1), filtered = rows.slice(), sortCol = 'score', sortDir = 'desc';
+(function(){
+  var schools = [...new Set(rows.map(function(r){return r[2];}).filter(Boolean))].sort();
+  var sf = document.getElementById('schoolFilter');
+  schools.forEach(function(s){
+    var o = document.createElement('option'); o.value = s; o.textContent = s; sf.appendChild(o);
+  });
+  document.getElementById('searchInput').addEventListener('input', filter);
+  document.getElementById('schoolFilter').addEventListener('change', filter);
+  document.getElementById('scoreFilter').addEventListener('change', filter);
+  document.querySelectorAll('thead th[data-sort]').forEach(function(th){
+    th.addEventListener('click', function(){ doSort(th.dataset.sort); });
+  });
+  doSort('score');
+})();
+function doSort(col){
+  if(sortCol===col) sortDir = sortDir==='asc'?'desc':'asc';
+  else { sortCol=col; sortDir=col==='score'?'desc':'asc'; }
+  var ths=document.querySelectorAll('thead th'); ths.forEach(function(t){t.classList.remove('sorted');});
+  var active=document.querySelector('thead th[data-sort="'+col+'"]');
+  if(active){active.classList.add('sorted');active.querySelector('.arrow').textContent=sortDir==='desc'?' ▼':' ▲';}
+  filtered.sort(function(a,b){
+    var va=a[col==='score'?1:0], vb=b[col==='score'?1:0];
+    if(col==='score'){va=parseInt(va)||0;vb=parseInt(vb)||0;}
+    var c=va>vb?1:va<vb?-1:0;
+    return sortDir==='asc'?c:-c;
+  });
+  render();
+}
+function filter(){
+  var s=document.getElementById('searchInput').value.toLowerCase().trim();
+  var school=document.getElementById('schoolFilter').value;
+  var minS=parseInt(document.getElementById('scoreFilter').value)||0;
+  filtered=rows.filter(function(r){
+    if(s&&r[0].toLowerCase().indexOf(s)===-1&&r[2].toLowerCase().indexOf(s)===-1)return false;
+    if(school&&r[2]!==school)return false;
+    if((parseInt(r[1])||0)<minS)return false;
+    return true;
+  });
+  doSort(sortCol);
+  document.getElementById('countDisplay').textContent=filtered.length===rows.length?'共 '+rows.length+' 人':'显示 '+filtered.length+' / '+rows.length+' 人';
+}
+function render(){
+  var tb=document.getElementById('tableBody'), nr=document.getElementById('noResult');
+  if(!filtered.length){tb.innerHTML='';nr.style.display='block';return;}
+  nr.style.display='none';
+  tb.innerHTML=filtered.map(function(r,i){
+    return '<tr><td class="rank">'+(i+1)+'</td><td>'+esc(r[0])+'</td><td class="score">'+r[1]+'</td><td class="school">'+(r[2]||'—')+'</td></tr>';
+  }).join('');
+}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Excel
+*.xlsx
+*.xls
+
+# Python
+*.py
+__pycache__/
+
+# Data
+*.json
+
+# Git
+.git/
+
+# System
+.DS_Store
+Thumbs.db
